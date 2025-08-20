@@ -23,14 +23,19 @@
 }
 
 .gantt-lane-header {
-  width: 200px;
-  padding: 0 15px;
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+  padding: 0 5px;
   border-right: 1px solid #2c3e50;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
+  word-break: break-all;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .gantt-timeline {
@@ -63,8 +68,10 @@
 }
 
 .gantt-lane-label {
-  width: 200px;
-  padding: 0 15px;
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+  padding: 0 5px;
   border-right: 1px solid #bdc3c7;
   background: #ecf0f1;
   display: flex;
@@ -72,8 +79,11 @@
   justify-content: center;
   font-weight: bold;
   color: #2c3e50;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1;
+  word-break: break-all;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .gantt-lane-content {
@@ -120,7 +130,7 @@
   /* 移除 left 和 width 的 transition，讓拖拽更流暢 */
 }
 
-/* 移除全域週末透明效果，改用分段處理 */
+/* 透明效果由分段實現，不使用全域透明度 */
 
 .gantt-task.dragging {
   z-index: 100;

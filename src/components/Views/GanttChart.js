@@ -332,33 +332,21 @@ function GanttChart() {
                   const width = displayWidth;
                   const left = displayLeft;
 
-                  // 計算當前顯示範圍的日期
-                  const currentStartDay = dragState?.taskId === task.id && dragState.previewStartDay !== undefined 
-                    ? dragState.previewStartDay 
-                    : startDay;
-                  const currentDuration = dragState?.taskId === task.id && dragState.previewDuration !== undefined
-                    ? dragState.previewDuration
-                    : duration;
-                  const currentEndDay = currentStartDay + currentDuration - 1;
-
-                  // 創建日期分段，每個日期一個片段
+                  // 創建精準的透明分段
                   const taskSegments = [];
-                  for (let d = currentStartDay; d <= currentEndDay; d++) {
+                  for (let d = startDay; d <= endDay; d++) {
                     if (d >= 0 && d < dateRange.length) {
                       const date = dateRange[d];
                       const dayOfWeek = date.getDay();
                       const isWeekend = (currentProject.skipSunday && dayOfWeek === 0) || 
                                        (currentProject.skipSaturday && dayOfWeek === 6);
                       
-                      const segmentLeft = (d - currentStartDay) * 60;
-                      const segmentOpacity = isWeekend ? 0.5 : 1;
-                      const isFirst = d === currentStartDay;
-                      const isLast = d === currentEndDay;
+                      const segmentLeft = (d - startDay) * 60;
+                      const segmentOpacity = isWeekend ? 0.5 : 1.0;
                       
                       taskSegments.push(
                         <div
-                          key={`segment-${d}`}
-                          className="task-segment"
+                          key={`seg-${d}`}
                           style={{
                             position: 'absolute',
                             left: `${segmentLeft}px`,
@@ -366,9 +354,9 @@ function GanttChart() {
                             height: '100%',
                             opacity: segmentOpacity,
                             background: 'inherit',
-                            borderRadius: isFirst && isLast ? '6px' : 
-                                         isFirst ? '6px 0 0 6px' :
-                                         isLast ? '0 6px 6px 0' : '0'
+                            borderRadius: d === startDay && d === endDay ? '6px' :
+                                         d === startDay ? '6px 0 0 6px' :
+                                         d === endDay ? '0 6px 6px 0' : '0'
                           }}
                         />
                       );
@@ -382,38 +370,32 @@ function GanttChart() {
                       style={{ 
                         left: `${left}px`, 
                         width: `${width}px`,
-                        background: 'transparent' // 讓分段背景顯示
+                        background: 'transparent'
                       }}
                       title={`${task.name}\n${formatDate(task.startDate)} ~ ${formatDate(task.endDate)}\n${task.duration}天 | 成本: NT$ ${task.cost.toLocaleString()} | 售價: NT$ ${task.price.toLocaleString()}`}
                       onMouseDown={(e) => handleTaskMouseDown(e, task, category)}
                     >
-                      {/* 背景分段 */}
+                      {/* 分段背景 */}
                       {taskSegments}
                       
                       {/* 控制手柄 */}
                       <div className="resize-handle left" onMouseDown={(e) => handleResizeStart(e, task, 'left')} />
                       <div className="resize-handle right" onMouseDown={(e) => handleResizeStart(e, task, 'right')} />
                       
-                      {/* 任務名稱 */}
-                      <div 
-                        className="task-name-overlay"
-                        style={{ 
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          zIndex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          pointerEvents: 'none',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: '12px',
-                          textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                        }}
-                      >
+                      {/* 任務文字 */}
+                      <div style={{
+                        position: 'relative',
+                        zIndex: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        pointerEvents: 'none',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                      }}>
                         {task.name}
                       </div>
                     </div>
