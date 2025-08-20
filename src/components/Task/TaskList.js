@@ -71,18 +71,19 @@ function TaskList() {
 
   return (
     <div>
-      <div className="view-header">
-        <h2>{getViewTitle(currentView)} - {currentProject.name}</h2>
-        {currentView !== 'list' && (
-          <button 
-            className="btn btn-success"
-            onClick={() => setShowTaskForm(true)}
-            style={{ position: 'absolute', top: '20px', right: '20px' }}
-          >
-            ➕ 新增工序
-          </button>
-        )}
-      </div>
+      {renderCurrentView()}
+      
+      {/* 浮動新增按鈕 - 只在非列表視圖顯示 */}
+      {currentView !== 'list' && (
+        <button 
+          className="floating-add-btn"
+          onClick={() => setShowTaskForm(true)}
+          title="新增工序"
+          aria-label="新增工序"
+        >
+          ➕
+        </button>
+      )}
 
       {showTaskForm && currentView !== 'list' && (
         <TaskForm 
@@ -90,8 +91,6 @@ function TaskList() {
           onClose={() => setShowTaskForm(false)} 
         />
       )}
-
-      {renderCurrentView()}
     </div>
   );
 }
@@ -184,16 +183,6 @@ function formatDate(date) {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
-function getViewTitle(view) {
-  const titles = {
-    'gantt': '🏊‍♂️ 甘特圖',
-    'calendar': '📅 日曆視圖',
-    'kanban-category': '🏗️ 工程看板',
-    'kanban-status': '📋 進度看板',
-    'list': '📝 列表視圖'
-  };
-  return titles[view] || '未知視圖';
-}
 
 // 更新專案排程的輔助函數
 function updateProjectSchedule(project, actions) {

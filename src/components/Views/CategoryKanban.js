@@ -67,6 +67,9 @@ function CategoryKanban() {
 
   return (
     <div className="kanban-view">
+      <div className="view-header">
+        <h2>🏗️ 工程看板 - {currentProject.name}</h2>
+      </div>
       <div className="kanban-board">
         {Object.entries(CATEGORIES).map(([categoryKey, categoryName]) => {
           const categoryTasks = currentProject.tasks

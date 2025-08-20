@@ -63,6 +63,9 @@ function GanttChart() {
 
   return (
     <div className="gantt-container">
+      <div className="view-header">
+        <h2>🏊‍♂️ 甘特圖 - {currentProject.name}</h2>
+      </div>
       <div className="gantt-chart">
         {/* 甘特圖標題列 */}
         <div className="gantt-header">

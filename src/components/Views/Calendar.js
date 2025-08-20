@@ -99,8 +99,11 @@ function Calendar() {
 
   return (
     <div className="calendar-view">
+      <div className="view-header">
+        <h2>📅 日曆視圖 - {currentProject.name}</h2>
+      </div>
       <div className="calendar-header">
-        <h2>{currentDate.getFullYear()}年{currentDate.getMonth() + 1}月</h2>
+        <h3>{currentDate.getFullYear()}年{currentDate.getMonth() + 1}月</h3>
         <div className="calendar-nav">
           <button onClick={() => navigateMonth(-1)}>‹ 上月</button>
           <button onClick={() => navigateMonth(0)}>今天</button>

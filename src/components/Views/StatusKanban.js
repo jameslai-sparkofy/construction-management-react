@@ -55,6 +55,9 @@ function StatusKanban() {
 
   return (
     <div className="kanban-view">
+      <div className="view-header">
+        <h2>📋 進度看板 - {currentProject.name}</h2>
+      </div>
       <div className="kanban-board">
         {statusColumns.map(column => {
           const columnTasks = currentProject.tasks.filter(task => task.status === column.key);
