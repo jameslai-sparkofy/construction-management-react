@@ -277,70 +277,35 @@ function GanttChart() {
                   const width = Math.min(duration * 60, (dateRange.length - startDay) * 60);
                   const left = startDay * 60;
 
-                  // 創建分段任務條，每個日期一個分段
-                  const taskSegments = [];
+                  // 先檢查是否跨越休息日，暫時回到簡單的透明效果
+                  let hasWeekendOverlap = false;
                   for (let d = startDay; d <= endDay; d++) {
                     if (d >= 0 && d < dateRange.length) {
                       const date = dateRange[d];
                       const dayOfWeek = date.getDay();
                       const isWeekend = (currentProject.skipSunday && dayOfWeek === 0) || 
                                        (currentProject.skipSaturday && dayOfWeek === 6);
-                      
-                      const segmentLeft = (d - startDay) * 60;
-                      const segmentWidth = 60;
-                      const segmentOpacity = isWeekend ? 0.5 : 1;
-                      
-                      taskSegments.push(
-                        <div
-                          key={`${task.id}-segment-${d}`}
-                          className="task-segment"
-                          style={{
-                            position: 'absolute',
-                            left: `${segmentLeft}px`,
-                            width: `${segmentWidth}px`,
-                            height: '100%',
-                            opacity: segmentOpacity,
-                            background: 'inherit',
-                            borderRadius: d === startDay ? '6px 0 0 6px' : d === endDay ? '0 6px 6px 0' : '0',
-                          }}
-                        />
-                      );
+                      if (isWeekend) {
+                        hasWeekendOverlap = true;
+                        break;
+                      }
                     }
                   }
 
                   return (
                     <div
                       key={task.id}
-                      className={`gantt-task ${task.category} ${dragState?.taskId === task.id ? 'dragging' : ''}`}
+                      className={`gantt-task ${task.category} ${hasWeekendOverlap ? 'weekend-overlap' : ''} ${dragState?.taskId === task.id ? 'dragging' : ''}`}
                       style={{ 
                         left: `${left}px`, 
-                        width: `${width}px`,
-                        background: 'transparent' // 讓分段背景顯示
+                        width: `${width}px`
                       }}
                       title={`${task.name}\n${formatDate(task.startDate)} ~ ${formatDate(task.endDate)}\n${task.duration}天 | 成本: NT$ ${task.cost.toLocaleString()} | 售價: NT$ ${task.price.toLocaleString()}`}
                       onMouseDown={(e) => handleTaskMouseDown(e, task, category)}
                     >
-                      {/* 背景分段 */}
-                      {taskSegments}
-                      
-                      {/* 控制手柄 */}
                       <div className="resize-handle left" onMouseDown={(e) => handleResizeStart(e, task, 'left')} />
+                      {task.name}
                       <div className="resize-handle right" onMouseDown={(e) => handleResizeStart(e, task, 'right')} />
-                      
-                      {/* 任務名稱 */}
-                      <div style={{ 
-                        position: 'relative', 
-                        zIndex: 2, 
-                        width: '100%', 
-                        textAlign: 'center',
-                        pointerEvents: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: '100%'
-                      }}>
-                        {task.name}
-                      </div>
                     </div>
                   );
                 })}

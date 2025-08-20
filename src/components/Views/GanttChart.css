@@ -114,7 +114,9 @@
   user-select: none;
 }
 
-/* 移除全條透明效果，改為在 JS 中處理個別格子透明 */
+.gantt-task.weekend-overlap {
+  opacity: 0.5;
+}
 
 .gantt-task.dragging {
   z-index: 100;
