@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import { Project, Task } from '../types/index.js';
+import { Project } from '../types/index.js';
 
 // 初始狀態
 const initialState = {
