@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { CATEGORIES, TASK_STATUS } from '../../types/index.js';
 import TaskForm from './TaskForm';
+import GanttChart from '../Views/GanttChart';
+import Calendar from '../Views/Calendar';
+import CategoryKanban from '../Views/CategoryKanban';
+import StatusKanban from '../Views/StatusKanban';
+import { calculateProjectSchedule } from '../../utils/scheduleCalculator';
 
 function TaskList() {
   const { currentProjectId, getCurrentProject, currentView, actions } = useProject();
@@ -18,51 +23,75 @@ function TaskList() {
     );
   }
 
-  if (currentView === 'list') {
-    return (
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2>📝 工序列表 - {currentProject.name}</h2>
+  const renderCurrentView = () => {
+    switch (currentView) {
+      case 'gantt':
+        return <GanttChart />;
+      case 'calendar':
+        return <Calendar />;
+      case 'kanban-category':
+        return <CategoryKanban />;
+      case 'kanban-status':
+        return <StatusKanban />;
+      case 'list':
+      default:
+        return (
           <div>
-            <button 
-              className="btn btn-success"
-              onClick={() => setShowTaskForm(true)}
-              style={{ marginRight: '10px' }}
-            >
-              ➕ 新增工序
-            </button>
-            <button 
-              className="btn btn-warning"
-              onClick={() => updateProjectSchedule(currentProject)}
-            >
-              🔄 更新排程
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2>📝 工序列表 - {currentProject.name}</h2>
+              <div>
+                <button 
+                  className="btn btn-success"
+                  onClick={() => setShowTaskForm(true)}
+                  style={{ marginRight: '10px' }}
+                >
+                  ➕ 新增工序
+                </button>
+                <button 
+                  className="btn btn-warning"
+                  onClick={() => updateProjectSchedule(currentProject, actions)}
+                >
+                  🔄 更新排程
+                </button>
+              </div>
+            </div>
+
+            {showTaskForm && (
+              <TaskForm 
+                projectId={currentProjectId}
+                onClose={() => setShowTaskForm(false)} 
+              />
+            )}
+
+            <TaskTable project={currentProject} />
           </div>
-        </div>
+        );
+    }
+  };
 
-        {showTaskForm && (
-          <TaskForm 
-            projectId={currentProjectId}
-            onClose={() => setShowTaskForm(false)} 
-          />
-        )}
-
-        <TaskTable project={currentProject} />
-      </div>
-    );
-  }
-
-  // 其他視圖暫時顯示佔位符
   return (
-    <div className="empty-state">
-      <h3>{getViewTitle(currentView)} - {currentProject.name}</h3>
-      <p>此視圖正在開發中...</p>
-      <button 
-        className="btn" 
-        onClick={() => actions.setCurrentView('list')}
-      >
-        返回列表視圖
-      </button>
+    <div>
+      <div className="view-header">
+        <h2>{getViewTitle(currentView)} - {currentProject.name}</h2>
+        {currentView !== 'list' && (
+          <button 
+            className="btn btn-success"
+            onClick={() => setShowTaskForm(true)}
+            style={{ position: 'absolute', top: '20px', right: '20px' }}
+          >
+            ➕ 新增工序
+          </button>
+        )}
+      </div>
+
+      {showTaskForm && currentView !== 'list' && (
+        <TaskForm 
+          projectId={currentProjectId}
+          onClose={() => setShowTaskForm(false)} 
+        />
+      )}
+
+      {renderCurrentView()}
     </div>
   );
 }
@@ -167,10 +196,33 @@ function getViewTitle(view) {
 }
 
 // 更新專案排程的輔助函數
-function updateProjectSchedule(project) {
-  // 這裡可以實作排程計算邏輯
-  console.log('更新排程:', project);
-  alert('排程更新功能即將實作！');
+function updateProjectSchedule(project, actions) {
+  if (!project.startDate) {
+    alert('請先設定專案開始日期');
+    return;
+  }
+
+  if (project.tasks.length === 0) {
+    alert('請先新增工序項目');
+    return;
+  }
+
+  const scheduledTasks = calculateProjectSchedule(
+    project.tasks,
+    project.startDate,
+    project.skipSaturday,
+    project.skipSunday
+  );
+
+  // 更新每個任務的排程
+  scheduledTasks.forEach(scheduledTask => {
+    actions.updateTask(project.id, scheduledTask.id, {
+      startDate: scheduledTask.startDate,
+      endDate: scheduledTask.endDate
+    });
+  });
+
+  alert('排程更新完成！');
 }
 
 export default TaskList;
