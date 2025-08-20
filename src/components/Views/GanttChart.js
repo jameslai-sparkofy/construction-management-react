@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { CATEGORIES } from '../../types/index.js';
 import { 
@@ -10,8 +10,10 @@ import {
 import './GanttChart.css';
 
 function GanttChart() {
-  const { getCurrentProject } = useProject();
+  const { getCurrentProject, actions } = useProject();
   const currentProject = getCurrentProject();
+  const [dragState, setDragState] = useState(null);
+  const ganttRef = useRef(null);
 
   const { scheduledTasks, dateRange } = useMemo(() => {
     if (!currentProject || !currentProject.startDate || currentProject.tasks.length === 0) {
@@ -61,8 +63,161 @@ function GanttChart() {
 
   const categories = [...new Set(scheduledTasks.map(t => t.category))];
 
+  // 拖拽處理函數
+  const handleTaskMouseDown = (e, task, category) => {
+    if (e.target.classList.contains('resize-handle')) return;
+    
+    const rect = ganttRef.current.getBoundingClientRect();
+    const startX = e.clientX - rect.left;
+    
+    setDragState({
+      taskId: task.id,
+      category,
+      type: 'move',
+      startX,
+      startDay: Math.floor((task.startDate - currentProject.startDate) / (1000 * 60 * 60 * 24))
+    });
+    
+    e.preventDefault();
+  };
+
+  const handleResizeStart = (e, task, direction) => {
+    e.stopPropagation();
+    
+    const rect = ganttRef.current.getBoundingClientRect();
+    const startX = e.clientX - rect.left;
+    
+    setDragState({
+      taskId: task.id,
+      type: 'resize',
+      direction,
+      startX,
+      originalDuration: task.duration
+    });
+    
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e) => {
+    if (!dragState) return;
+    
+    const rect = ganttRef.current.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const deltaX = currentX - dragState.startX;
+    const deltaDays = Math.round(deltaX / 60);
+    
+    if (dragState.type === 'move') {
+      const newStartDay = Math.max(0, dragState.startDay + deltaDays);
+      if (newStartDay !== dragState.startDay) {
+        // 這裡會在 handleMouseUp 時處理實際更新
+      }
+    } else if (dragState.type === 'resize') {
+      let newDuration = dragState.originalDuration;
+      if (dragState.direction === 'right') {
+        newDuration = Math.max(1, dragState.originalDuration + deltaDays);
+      } else if (dragState.direction === 'left') {
+        newDuration = Math.max(1, dragState.originalDuration - deltaDays);
+      }
+      // 這裡會在 handleMouseUp 時處理實際更新
+    }
+  };
+
+  const handleMouseUp = async (e) => {
+    if (!dragState) return;
+    
+    const rect = ganttRef.current.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const deltaX = currentX - dragState.startX;
+    const deltaDays = Math.round(deltaX / 60);
+    
+    const task = scheduledTasks.find(t => t.id === dragState.taskId);
+    if (!task) return;
+    
+    let updateNeeded = false;
+    let newStartDate = task.startDate;
+    let newDuration = task.duration;
+    
+    if (dragState.type === 'move' && deltaDays !== 0) {
+      const newStartDay = Math.max(0, dragState.startDay + deltaDays);
+      newStartDate = new Date(currentProject.startDate);
+      newStartDate.setDate(newStartDate.getDate() + newStartDay);
+      updateNeeded = true;
+    } else if (dragState.type === 'resize') {
+      if (dragState.direction === 'right') {
+        newDuration = Math.max(1, dragState.originalDuration + deltaDays);
+        updateNeeded = newDuration !== task.duration;
+      } else if (dragState.direction === 'left') {
+        newDuration = Math.max(1, dragState.originalDuration - deltaDays);
+        const daysDiff = task.duration - newDuration;
+        newStartDate = new Date(task.startDate);
+        newStartDate.setDate(newStartDate.getDate() + daysDiff);
+        updateNeeded = newDuration !== task.duration;
+      }
+    }
+    
+    if (updateNeeded) {
+      // 檢查是否會影響後續任務
+      const affectedTasks = scheduledTasks.filter(t => 
+        t.order > task.order && 
+        (newStartDate > task.startDate || newDuration !== task.duration)
+      );
+      
+      if (affectedTasks.length > 0) {
+        const shouldUpdateFollowing = window.confirm(
+          `此變更會影響到 ${affectedTasks.length} 個後續任務的排程，是否一併調整？`
+        );
+        
+        if (shouldUpdateFollowing) {
+          // 更新當前任務
+          actions.updateTask(currentProject.id, task.id, {
+            duration: newDuration,
+            startDate: newStartDate
+          });
+          
+          // 重新計算所有任務排程
+          setTimeout(() => {
+            const updatedProject = getCurrentProject();
+            const rescheduledTasks = calculateProjectSchedule(
+              updatedProject.tasks,
+              updatedProject.startDate,
+              updatedProject.skipSaturday,
+              updatedProject.skipSunday
+            );
+            
+            rescheduledTasks.forEach(scheduledTask => {
+              actions.updateTask(updatedProject.id, scheduledTask.id, {
+                startDate: scheduledTask.startDate,
+                endDate: scheduledTask.endDate
+              });
+            });
+          }, 100);
+        } else {
+          // 只更新當前任務
+          actions.updateTask(currentProject.id, task.id, {
+            duration: newDuration,
+            startDate: newStartDate
+          });
+        }
+      } else {
+        // 沒有影響其他任務，直接更新
+        actions.updateTask(currentProject.id, task.id, {
+          duration: newDuration,
+          startDate: newStartDate
+        });
+      }
+    }
+    
+    setDragState(null);
+  };
+
   return (
-    <div className="gantt-container">
+    <div 
+      className="gantt-container"
+      ref={ganttRef}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={() => setDragState(null)}
+    >
       <div className="view-header">
         <h2>🏊‍♂️ 甘特圖 - {currentProject.name}</h2>
       </div>
@@ -125,20 +280,38 @@ function GanttChart() {
 
                   if (startDay < 0 || startDay >= dateRange.length) return null;
 
-                  const width = Math.min(duration * 40, (dateRange.length - startDay) * 40);
-                  const left = startDay * 40;
+                  const width = Math.min(duration * 60, (dateRange.length - startDay) * 60);
+                  const left = startDay * 60;
+
+                  // 檢查是否跨越休息日
+                  let hasWeekendOverlap = false;
+                  for (let d = startDay; d <= endDay; d++) {
+                    if (d >= 0 && d < dateRange.length) {
+                      const date = dateRange[d];
+                      const dayOfWeek = date.getDay();
+                      const isWeekend = (currentProject.skipSunday && dayOfWeek === 0) || 
+                                       (currentProject.skipSaturday && dayOfWeek === 6);
+                      if (isWeekend) {
+                        hasWeekendOverlap = true;
+                        break;
+                      }
+                    }
+                  }
 
                   return (
                     <div
                       key={task.id}
-                      className={`gantt-task ${task.category}`}
+                      className={`gantt-task ${task.category} ${hasWeekendOverlap ? 'weekend-overlap' : ''} ${dragState?.taskId === task.id ? 'dragging' : ''}`}
                       style={{ 
                         left: `${left}px`, 
                         width: `${width}px` 
                       }}
                       title={`${task.name}\n${formatDate(task.startDate)} ~ ${formatDate(task.endDate)}\n${task.duration}天 | 成本: NT$ ${task.cost.toLocaleString()} | 售價: NT$ ${task.price.toLocaleString()}`}
+                      onMouseDown={(e) => handleTaskMouseDown(e, task, category)}
                     >
+                      <div className="resize-handle left" onMouseDown={(e) => handleResizeStart(e, task, 'left')} />
                       {task.name}
+                      <div className="resize-handle right" onMouseDown={(e) => handleResizeStart(e, task, 'right')} />
                     </div>
                   );
                 })}

@@ -38,11 +38,14 @@
 }
 
 .gantt-day {
-  min-width: 40px;
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
   padding: 10px 5px;
   border-right: 1px solid #2c3e50;
   text-align: center;
   font-size: 12px;
+  box-sizing: border-box;
 }
 
 .gantt-day.weekend {
@@ -77,9 +80,12 @@
 
 /* 日期列 */
 .gantt-day-column {
-  min-width: 40px;
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
   border-right: 1px solid #ecf0f1;
   position: relative;
+  box-sizing: border-box;
 }
 
 .gantt-day-column.weekend {
@@ -98,13 +104,43 @@
   font-size: 12px;
   font-weight: bold;
   color: white;
-  cursor: pointer;
+  cursor: move;
   transition: all 0.3s;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   z-index: 10;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  user-select: none;
+}
+
+.gantt-task.weekend-overlap {
+  opacity: 0.5;
+}
+
+.gantt-task.dragging {
+  z-index: 100;
+  cursor: grabbing;
+  transform: scale(1.02);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.gantt-task .resize-handle {
+  position: absolute;
+  width: 6px;
+  height: 100%;
+  background: rgba(255,255,255,0.3);
+  cursor: ew-resize;
+}
+
+.gantt-task .resize-handle.left {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+
+.gantt-task .resize-handle.right {
+  right: 0;
+  border-radius: 0 6px 6px 0;
 }
 
 .gantt-task:hover {
