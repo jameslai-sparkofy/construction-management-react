@@ -112,13 +112,7 @@ function GanttChart() {
         // 這裡會在 handleMouseUp 時處理實際更新
       }
     } else if (dragState.type === 'resize') {
-      let newDuration = dragState.originalDuration;
-      if (dragState.direction === 'right') {
-        newDuration = Math.max(1, dragState.originalDuration + deltaDays);
-      } else if (dragState.direction === 'left') {
-        newDuration = Math.max(1, dragState.originalDuration - deltaDays);
-      }
-      // 這裡會在 handleMouseUp 時處理實際更新
+      // 預覽調整大小，實際更新在 handleMouseUp 時處理
     }
   };
 
