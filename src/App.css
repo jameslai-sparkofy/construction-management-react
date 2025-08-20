@@ -68,6 +68,53 @@ body {
   height: calc(100vh - 70px);
 }
 
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .main-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  
+  .sidebar {
+    height: auto;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 2px solid #e9ecef;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 10px 15px;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .header h1 {
+    font-size: 1.4em;
+  }
+  
+  .view-tabs {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .tab-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .sidebar {
+    padding: 15px;
+  }
+  
+  .control-section {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+}
+
 /* 側邊欄 */
 .sidebar {
   background: white;
@@ -343,6 +390,51 @@ body {
 
 .close-btn:hover {
   color: #e74c3c;
+}
+
+/* 錯誤邊界 */
+.error-boundary {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: #f8f9fa;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 500px;
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.error-content h2 {
+  color: #e74c3c;
+  margin-bottom: 20px;
+}
+
+.error-actions {
+  margin-top: 30px;
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.error-details {
+  margin-top: 20px;
+  text-align: left;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.error-details summary {
+  padding: 10px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-weight: bold;
 }
 
 /* 視圖標題 */

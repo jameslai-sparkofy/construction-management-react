@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { Project } from '../types/index.js';
+import { saveProjects, loadProjects, saveCurrentProjectId, loadCurrentProjectId } from '../utils/localStorage.js';
 
 // 初始狀態
 const initialState = {
@@ -193,7 +194,20 @@ const ProjectContext = createContext();
 
 // Provider 組件
 export function ProjectProvider({ children }) {
-  const [state, dispatch] = useReducer(projectReducer, initialState);
+  const [state, dispatch] = useReducer(projectReducer, {
+    ...initialState,
+    projects: loadProjects(),
+    currentProjectId: loadCurrentProjectId()
+  });
+  
+  // 自動保存數據到 localStorage
+  useEffect(() => {
+    saveProjects(state.projects);
+  }, [state.projects]);
+  
+  useEffect(() => {
+    saveCurrentProjectId(state.currentProjectId);
+  }, [state.currentProjectId]);
 
   // Actions
   const actions = {
