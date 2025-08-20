@@ -104,7 +104,7 @@
   font-size: 12px;
   font-weight: bold;
   color: white;
-  cursor: move;
+  cursor: grab;
   transition: all 0.3s;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   z-index: 10;
@@ -114,9 +114,7 @@
   user-select: none;
 }
 
-.gantt-task.weekend-overlap {
-  opacity: 0.5;
-}
+/* 移除全條透明效果，改為在 JS 中處理個別格子透明 */
 
 .gantt-task.dragging {
   z-index: 100;
@@ -127,10 +125,16 @@
 
 .gantt-task .resize-handle {
   position: absolute;
-  width: 6px;
+  width: 8px;
   height: 100%;
-  background: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.4);
   cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.gantt-task:hover .resize-handle {
+  opacity: 1;
 }
 
 .gantt-task .resize-handle.left {
