@@ -5,6 +5,7 @@ import ProjectList from './components/Project/ProjectList';
 import TaskList from './components/Task/TaskList';
 import ProjectForm from './components/Project/ProjectForm';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+import VersionInfo from './components/Common/VersionInfo';
 import './App.css';
 
 function App() {
@@ -43,6 +44,9 @@ function App() {
               <TaskList />
             </main>
           </div>
+          
+          {/* 版本資訊 */}
+          <VersionInfo />
         </div>
       </ProjectProvider>
     </ErrorBoundary>

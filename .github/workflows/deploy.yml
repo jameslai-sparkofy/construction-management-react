@@ -28,6 +28,9 @@ jobs:
         run: npm install
 
       - name: Build application
+        env:
+          REACT_APP_COMMIT_HASH: ${{ github.sha }}
+          REACT_APP_BUILD_TIME: ${{ github.event.head_commit.timestamp }}
         run: npm run build
 
       - name: Deploy to Cloudflare Pages
