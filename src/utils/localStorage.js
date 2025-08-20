@@ -1,4 +1,5 @@
 // localStorage 數據持久化工具
+import { Project, Task } from '../types/index.js';
 
 const STORAGE_KEYS = {
   PROJECTS: 'construction_management_projects',
@@ -51,18 +52,21 @@ export function loadProjects() {
       return [];
     }
     
-    // 反序列化日期對象
-    return parsed.projects.map(project => ({
-      ...project,
-      startDate: project.startDate ? new Date(project.startDate) : null,
-      createdAt: new Date(project.createdAt),
-      updatedAt: new Date(project.updatedAt),
-      tasks: project.tasks.map(task => ({
-        ...task,
-        startDate: task.startDate ? new Date(task.startDate) : null,
-        endDate: task.endDate ? new Date(task.endDate) : null
-      }))
-    }));
+    // 反序列化為正確的類實例
+    return parsed.projects.map(projectData => {
+      const project = new Project({
+        ...projectData,
+        startDate: projectData.startDate ? new Date(projectData.startDate) : null,
+        createdAt: new Date(projectData.createdAt),
+        updatedAt: new Date(projectData.updatedAt),
+        tasks: projectData.tasks.map(taskData => new Task({
+          ...taskData,
+          startDate: taskData.startDate ? new Date(taskData.startDate) : null,
+          endDate: taskData.endDate ? new Date(taskData.endDate) : null
+        }))
+      });
+      return project;
+    });
   } catch (error) {
     console.error('加載專案數據失敗:', error);
     return [];
