@@ -65,24 +65,36 @@ function GanttChart() {
 
   // 拖拽處理函數
   const handleTaskMouseDown = (e, task, category) => {
+    // 檢查是否點擊在調整大小手柄上
     if (e.target.classList.contains('resize-handle')) return;
+    
+    // 確保只有左鍵點擊才觸發拖拽
+    if (e.button !== 0) return;
     
     const rect = ganttRef.current.getBoundingClientRect();
     const startX = e.clientX - rect.left;
+    const startDay = Math.floor((task.startDate - currentProject.startDate) / (1000 * 60 * 60 * 24));
     
     setDragState({
       taskId: task.id,
       category,
       type: 'move',
       startX,
-      startDay: Math.floor((task.startDate - currentProject.startDate) / (1000 * 60 * 60 * 24))
+      startDay,
+      previewStartDay: startDay
     });
     
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('開始拖拽任務:', task.name, 'startDay:', startDay);
   };
 
   const handleResizeStart = (e, task, direction) => {
     e.stopPropagation();
+    
+    // 確保只有左鍵點擊才觸發調整大小
+    if (e.button !== 0) return;
     
     const rect = ganttRef.current.getBoundingClientRect();
     const startX = e.clientX - rect.left;
@@ -92,16 +104,21 @@ function GanttChart() {
       type: 'resize',
       direction,
       startX,
-      originalDuration: task.duration
+      originalDuration: task.duration,
+      previewDuration: task.duration
     });
     
     e.preventDefault();
+    
+    console.log('開始調整大小:', task.name, direction, '原始工期:', task.duration);
   };
 
   const handleMouseMove = (e) => {
     if (!dragState) return;
     
-    const rect = ganttRef.current.getBoundingClientRect();
+    const rect = ganttRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
     const currentX = e.clientX - rect.left;
     const deltaX = currentX - dragState.startX;
     const deltaDays = Math.round(deltaX / 60);
@@ -109,11 +126,13 @@ function GanttChart() {
     // 更新拖拽狀態以提供實時視覺反饋
     if (dragState.type === 'move') {
       const newStartDay = Math.max(0, dragState.startDay + deltaDays);
-      setDragState({
-        ...dragState,
-        currentDeltaDays: deltaDays,
-        previewStartDay: newStartDay
-      });
+      if (newStartDay !== dragState.previewStartDay) {
+        setDragState({
+          ...dragState,
+          currentDeltaDays: deltaDays,
+          previewStartDay: newStartDay
+        });
+      }
     } else if (dragState.type === 'resize') {
       let newDuration = dragState.originalDuration;
       if (dragState.direction === 'right') {
@@ -122,11 +141,13 @@ function GanttChart() {
         newDuration = Math.max(1, dragState.originalDuration - deltaDays);
       }
       
-      setDragState({
-        ...dragState,
-        currentDeltaDays: deltaDays,
-        previewDuration: newDuration
-      });
+      if (newDuration !== dragState.previewDuration) {
+        setDragState({
+          ...dragState,
+          currentDeltaDays: deltaDays,
+          previewDuration: newDuration
+        });
+      }
     }
   };
 
@@ -311,35 +332,90 @@ function GanttChart() {
                   const width = displayWidth;
                   const left = displayLeft;
 
-                  // 先檢查是否跨越休息日，暫時回到簡單的透明效果
-                  let hasWeekendOverlap = false;
-                  for (let d = startDay; d <= endDay; d++) {
+                  // 計算當前顯示範圍的日期
+                  const currentStartDay = dragState?.taskId === task.id && dragState.previewStartDay !== undefined 
+                    ? dragState.previewStartDay 
+                    : startDay;
+                  const currentDuration = dragState?.taskId === task.id && dragState.previewDuration !== undefined
+                    ? dragState.previewDuration
+                    : duration;
+                  const currentEndDay = currentStartDay + currentDuration - 1;
+
+                  // 創建日期分段，每個日期一個片段
+                  const taskSegments = [];
+                  for (let d = currentStartDay; d <= currentEndDay; d++) {
                     if (d >= 0 && d < dateRange.length) {
                       const date = dateRange[d];
                       const dayOfWeek = date.getDay();
                       const isWeekend = (currentProject.skipSunday && dayOfWeek === 0) || 
                                        (currentProject.skipSaturday && dayOfWeek === 6);
-                      if (isWeekend) {
-                        hasWeekendOverlap = true;
-                        break;
-                      }
+                      
+                      const segmentLeft = (d - currentStartDay) * 60;
+                      const segmentOpacity = isWeekend ? 0.5 : 1;
+                      const isFirst = d === currentStartDay;
+                      const isLast = d === currentEndDay;
+                      
+                      taskSegments.push(
+                        <div
+                          key={`segment-${d}`}
+                          className="task-segment"
+                          style={{
+                            position: 'absolute',
+                            left: `${segmentLeft}px`,
+                            width: '60px',
+                            height: '100%',
+                            opacity: segmentOpacity,
+                            background: 'inherit',
+                            borderRadius: isFirst && isLast ? '6px' : 
+                                         isFirst ? '6px 0 0 6px' :
+                                         isLast ? '0 6px 6px 0' : '0'
+                          }}
+                        />
+                      );
                     }
                   }
 
                   return (
                     <div
                       key={task.id}
-                      className={`gantt-task ${task.category} ${hasWeekendOverlap ? 'weekend-overlap' : ''} ${dragState?.taskId === task.id ? 'dragging' : ''}`}
+                      className={`gantt-task ${task.category} ${dragState?.taskId === task.id ? 'dragging' : ''}`}
                       style={{ 
                         left: `${left}px`, 
-                        width: `${width}px`
+                        width: `${width}px`,
+                        background: 'transparent' // 讓分段背景顯示
                       }}
                       title={`${task.name}\n${formatDate(task.startDate)} ~ ${formatDate(task.endDate)}\n${task.duration}天 | 成本: NT$ ${task.cost.toLocaleString()} | 售價: NT$ ${task.price.toLocaleString()}`}
                       onMouseDown={(e) => handleTaskMouseDown(e, task, category)}
                     >
+                      {/* 背景分段 */}
+                      {taskSegments}
+                      
+                      {/* 控制手柄 */}
                       <div className="resize-handle left" onMouseDown={(e) => handleResizeStart(e, task, 'left')} />
-                      {task.name}
                       <div className="resize-handle right" onMouseDown={(e) => handleResizeStart(e, task, 'right')} />
+                      
+                      {/* 任務名稱 */}
+                      <div 
+                        className="task-name-overlay"
+                        style={{ 
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          zIndex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          pointerEvents: 'none',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '12px',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                        }}
+                      >
+                        {task.name}
+                      </div>
                     </div>
                   );
                 })}
