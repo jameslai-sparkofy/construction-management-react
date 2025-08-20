@@ -106,13 +106,27 @@ function GanttChart() {
     const deltaX = currentX - dragState.startX;
     const deltaDays = Math.round(deltaX / 60);
     
+    // 更新拖拽狀態以提供實時視覺反饋
     if (dragState.type === 'move') {
       const newStartDay = Math.max(0, dragState.startDay + deltaDays);
-      if (newStartDay !== dragState.startDay) {
-        // 這裡會在 handleMouseUp 時處理實際更新
-      }
+      setDragState({
+        ...dragState,
+        currentDeltaDays: deltaDays,
+        previewStartDay: newStartDay
+      });
     } else if (dragState.type === 'resize') {
-      // 預覽調整大小，實際更新在 handleMouseUp 時處理
+      let newDuration = dragState.originalDuration;
+      if (dragState.direction === 'right') {
+        newDuration = Math.max(1, dragState.originalDuration + deltaDays);
+      } else if (dragState.direction === 'left') {
+        newDuration = Math.max(1, dragState.originalDuration - deltaDays);
+      }
+      
+      setDragState({
+        ...dragState,
+        currentDeltaDays: deltaDays,
+        previewDuration: newDuration
+      });
     }
   };
 
@@ -274,8 +288,28 @@ function GanttChart() {
 
                   if (startDay < 0 || startDay >= dateRange.length) return null;
 
-                  const width = Math.min(duration * 60, (dateRange.length - startDay) * 60);
-                  const left = startDay * 60;
+                  // 計算實際顯示位置和寬度（考慮拖拽狀態）
+                  let displayLeft = startDay * 60;
+                  let displayWidth = Math.min(duration * 60, (dateRange.length - startDay) * 60);
+                  
+                  // 如果正在拖拽此任務，使用預覽位置
+                  if (dragState?.taskId === task.id) {
+                    if (dragState.type === 'move' && dragState.previewStartDay !== undefined) {
+                      displayLeft = dragState.previewStartDay * 60;
+                      displayWidth = Math.min(duration * 60, (dateRange.length - dragState.previewStartDay) * 60);
+                    } else if (dragState.type === 'resize' && dragState.previewDuration !== undefined) {
+                      if (dragState.direction === 'right') {
+                        displayWidth = Math.min(dragState.previewDuration * 60, (dateRange.length - startDay) * 60);
+                      } else if (dragState.direction === 'left') {
+                        const daysDiff = duration - dragState.previewDuration;
+                        displayLeft = (startDay + daysDiff) * 60;
+                        displayWidth = Math.min(dragState.previewDuration * 60, (dateRange.length - startDay - daysDiff) * 60);
+                      }
+                    }
+                  }
+                  
+                  const width = displayWidth;
+                  const left = displayLeft;
 
                   // 先檢查是否跨越休息日，暫時回到簡單的透明效果
                   let hasWeekendOverlap = false;
