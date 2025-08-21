@@ -198,9 +198,13 @@ function GanttChart() {
         
         if (shouldUpdateFollowing) {
           // 更新當前任務
+          const newEndDate = new Date(newStartDate);
+          newEndDate.setDate(newEndDate.getDate() + newDuration - 1);
+          
           actions.updateTask(currentProject.id, task.id, {
             duration: newDuration,
-            startDate: newStartDate
+            startDate: newStartDate,
+            endDate: newEndDate
           });
           
           // 重新計算所有任務排程
@@ -222,16 +226,24 @@ function GanttChart() {
           }, 100);
         } else {
           // 只更新當前任務
+          const newEndDate = new Date(newStartDate);
+          newEndDate.setDate(newEndDate.getDate() + newDuration - 1);
+          
           actions.updateTask(currentProject.id, task.id, {
             duration: newDuration,
-            startDate: newStartDate
+            startDate: newStartDate,
+            endDate: newEndDate
           });
         }
       } else {
         // 沒有影響其他任務，直接更新
+        const newEndDate = new Date(newStartDate);
+        newEndDate.setDate(newEndDate.getDate() + newDuration - 1);
+        
         actions.updateTask(currentProject.id, task.id, {
           duration: newDuration,
-          startDate: newStartDate
+          startDate: newStartDate,
+          endDate: newEndDate
         });
       }
     }
