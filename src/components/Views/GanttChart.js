@@ -171,6 +171,14 @@ function GanttChart() {
       newStartDate = new Date(currentProject.startDate);
       newStartDate.setDate(newStartDate.getDate() + newStartDay);
       updateNeeded = true;
+      
+      console.log('拖拽更新:', {
+        原始任務: task.name,
+        原始startDay: dragState.startDay,
+        移動天數: deltaDays,
+        新startDay: newStartDay,
+        新開始日期: newStartDate.toISOString().split('T')[0]
+      });
     } else if (dragState.type === 'resize') {
       if (dragState.direction === 'right') {
         newDuration = Math.max(1, dragState.originalDuration + deltaDays);
@@ -277,7 +285,7 @@ function GanttChart() {
                   key={index} 
                   className={`gantt-day ${isWeekend ? 'weekend' : ''}`}
                 >
-                  {date.getDate()}<br />
+                  {date.getMonth() + 1}/{date.getDate()}<br />
                   {getWeekdayName(dayOfWeek)}
                 </div>
               );
