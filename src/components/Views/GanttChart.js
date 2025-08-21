@@ -73,7 +73,9 @@ function GanttChart() {
     
     const rect = ganttRef.current.getBoundingClientRect();
     const startX = e.clientX - rect.left;
-    const startDay = Math.floor((task.startDate - currentProject.startDate) / (1000 * 60 * 60 * 24));
+    const taskStartDate = new Date(task.startDate);
+    const projectStartDate = new Date(currentProject.startDate);
+    const startDay = Math.floor((taskStartDate.getTime() - projectStartDate.getTime()) / (1000 * 60 * 60 * 24));
     
     setDragState({
       taskId: task.id,
@@ -319,11 +321,15 @@ function GanttChart() {
 
                 {/* 任務條 */}
                 {categoryTasks.map(task => {
+                  const taskStartDate = new Date(task.startDate);
+                  const taskEndDate = new Date(task.endDate);
+                  const projectStartDate = new Date(currentProject.startDate);
+                  
                   const startDay = Math.floor(
-                    (task.startDate - currentProject.startDate) / (1000 * 60 * 60 * 24)
+                    (taskStartDate.getTime() - projectStartDate.getTime()) / (1000 * 60 * 60 * 24)
                   );
                   const endDay = Math.floor(
-                    (task.endDate - currentProject.startDate) / (1000 * 60 * 60 * 24)
+                    (taskEndDate.getTime() - projectStartDate.getTime()) / (1000 * 60 * 60 * 24)
                   );
                   const duration = endDay - startDay + 1;
 
