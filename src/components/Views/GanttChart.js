@@ -332,16 +332,40 @@ function GanttChart() {
                   const width = displayWidth;
                   const left = displayLeft;
 
-                  // 創建精準的透明分段
+                  // 獲取任務分類的背景顏色
+                  const getTaskBackground = (category) => {
+                    switch(category) {
+                      case 'water-electric': return 'linear-gradient(135deg, #00b894, #00a085)';
+                      case 'masonry': return 'linear-gradient(135deg, #fd79a8, #e84393)';
+                      case 'carpentry': return 'linear-gradient(135deg, #fdcb6e, #e17055)';
+                      case 'painting': return 'linear-gradient(135deg, #74b9ff, #0984e3)';
+                      case 'flooring': return 'linear-gradient(135deg, #a29bfe, #6c5ce7)';
+                      default: return 'linear-gradient(135deg, #74b9ff, #0984e3)';
+                    }
+                  };
+
+                  // 創建精準的透明分段 - 使用實際顯示的範圍
                   const taskSegments = [];
-                  for (let d = startDay; d <= endDay; d++) {
+                  const taskBackground = getTaskBackground(task.category);
+                  
+                  // 根據拖拽狀態調整分段計算的起始和結束日
+                  let segmentStartDay = startDay;
+                  let segmentEndDay = endDay;
+                  
+                  if (dragState?.taskId === task.id && dragState.type === 'move' && dragState.previewStartDay !== undefined) {
+                    const deltaDays = dragState.previewStartDay - startDay;
+                    segmentStartDay = dragState.previewStartDay;
+                    segmentEndDay = endDay + deltaDays;
+                  }
+                  
+                  for (let d = segmentStartDay; d <= segmentEndDay; d++) {
                     if (d >= 0 && d < dateRange.length) {
                       const date = dateRange[d];
                       const dayOfWeek = date.getDay();
                       const isWeekend = (currentProject.skipSunday && dayOfWeek === 0) || 
                                        (currentProject.skipSaturday && dayOfWeek === 6);
                       
-                      const segmentLeft = (d - startDay) * 60;
+                      const segmentLeft = (d - segmentStartDay) * 60;
                       const segmentOpacity = isWeekend ? 0.5 : 1.0;
                       
                       taskSegments.push(
@@ -353,10 +377,10 @@ function GanttChart() {
                             width: '60px',
                             height: '100%',
                             opacity: segmentOpacity,
-                            background: 'inherit',
-                            borderRadius: d === startDay && d === endDay ? '6px' :
-                                         d === startDay ? '6px 0 0 6px' :
-                                         d === endDay ? '0 6px 6px 0' : '0'
+                            background: taskBackground,
+                            borderRadius: d === segmentStartDay && d === segmentEndDay ? '6px' :
+                                         d === segmentStartDay ? '6px 0 0 6px' :
+                                         d === segmentEndDay ? '0 6px 6px 0' : '0'
                           }}
                         />
                       );

@@ -6,10 +6,12 @@ import TaskList from './components/Task/TaskList';
 import ProjectForm from './components/Project/ProjectForm';
 import ErrorBoundary from './components/Common/ErrorBoundary';
 import VersionInfo from './components/Common/VersionInfo';
+import TestGantt from './TestGantt';
 import './App.css';
 
 function App() {
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [showTestGantt, setShowTestGantt] = useState(false);
 
   return (
     <ErrorBoundary>
@@ -31,6 +33,14 @@ function App() {
                   ➕ 新增專案
                 </button>
                 
+                <button 
+                  className="btn btn-info" 
+                  onClick={() => setShowTestGantt(!showTestGantt)}
+                  style={{ marginTop: '10px' }}
+                >
+                  🧪 測試甘特圖
+                </button>
+                
                 {showProjectForm && (
                   <ProjectForm onClose={() => setShowProjectForm(false)} />
                 )}
@@ -41,7 +51,7 @@ function App() {
 
             {/* 主要內容區 */}
             <main className="content-area" role="main" aria-label="主要內容區域">
-              <TaskList />
+              {showTestGantt ? <TestGantt /> : <TaskList />}
             </main>
           </div>
           
