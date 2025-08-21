@@ -190,3 +190,26 @@
 .gantt-task.flooring { 
   background: linear-gradient(135deg, #a29bfe, #6c5ce7); 
 }
+
+/* 拖拽狀態樣式 */
+.gantt-task.dragging {
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  transform: scale(1.02);
+  z-index: 1000 !important;
+}
+
+.gantt-task * {
+  pointer-events: none;
+}
+
+.gantt-task {
+  pointer-events: auto;
+}
+
+/* 防止拖拽時文字被選中 */
+.gantt-container {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
