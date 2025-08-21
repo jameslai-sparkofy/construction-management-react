@@ -12,187 +12,131 @@ import './GanttChart.css';
 function GanttChart() {
   const { getCurrentProject, actions } = useProject();
   const currentProject = getCurrentProject();
-  const [dragState, setDragState] = useState(null);
   const ganttRef = useRef(null);
   
-  // 全局事件監聽器管理
+  // 簡化的拖拽狀態
+  const [isDragging, setIsDragging] = useState(false);
+  
+  // 純JavaScript拖拽實現
   useEffect(() => {
-    const handleGlobalMouseMove = (e) => {
-      if (!dragState) return;
+    const ganttContainer = ganttRef.current;
+    if (!ganttContainer) return;
+
+    let dragData = null;
+
+    const handleMouseDown = (e) => {
+      const taskElement = e.target.closest('.gantt-task');
+      if (!taskElement) return;
       
-      const rect = ganttRef.current?.getBoundingClientRect();
-      if (!rect) return;
+      e.preventDefault();
+      e.stopPropagation();
       
+      const taskId = taskElement.dataset.taskId;
+      const task = scheduledTasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const rect = ganttContainer.getBoundingClientRect();
+      const startX = e.clientX - rect.left;
+      
+      // 計算當前任務的startDay
+      const projectStartDate = new Date(currentProject.startDate);
+      const taskStartDate = new Date(task.startDate);
+      projectStartDate.setHours(0, 0, 0, 0);
+      taskStartDate.setHours(0, 0, 0, 0);
+      const startDay = Math.floor((taskStartDate - projectStartDate) / (1000 * 60 * 60 * 24));
+
+      dragData = {
+        taskId,
+        task,
+        startX,
+        startDay,
+        originalLeft: parseInt(taskElement.style.left) || 0
+      };
+
+      setIsDragging(true);
+      taskElement.style.zIndex = '1000';
+      taskElement.style.opacity = '0.8';
+      
+      console.log('開始拖拽:', dragData);
+    };
+
+    const handleMouseMove = (e) => {
+      if (!dragData) return;
+      
+      const rect = ganttContainer.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
-      const deltaX = currentX - dragState.startX;
+      const deltaX = currentX - dragData.startX;
       const deltaDays = Math.round(deltaX / 60);
+      const newLeft = Math.max(0, dragData.originalLeft + deltaX);
       
-      console.log('全局鼠標移動:', { currentX, deltaX, deltaDays });
-      
-      // 更新拖拽狀態以提供實時視覺反饋
-      if (dragState.type === 'move') {
-        const newStartDay = Math.max(0, dragState.startDay + deltaDays);
-        if (newStartDay !== dragState.previewStartDay) {
-          setDragState({
-            ...dragState,
-            currentDeltaDays: deltaDays,
-            previewStartDay: newStartDay
-          });
-          console.log('更新預覽位置:', { newStartDay, deltaDays });
-        }
-      } else if (dragState.type === 'resize') {
-        let newDuration = dragState.originalDuration;
-        if (dragState.direction === 'right') {
-          newDuration = Math.max(1, dragState.originalDuration + deltaDays);
-        } else if (dragState.direction === 'left') {
-          newDuration = Math.max(1, dragState.originalDuration - deltaDays);
-        }
-        
-        if (newDuration !== dragState.previewDuration) {
-          setDragState({
-            ...dragState,
-            currentDeltaDays: deltaDays,
-            previewDuration: newDuration
-          });
-        }
+      const taskElement = ganttContainer.querySelector(`[data-task-id="${dragData.taskId}"]`);
+      if (taskElement) {
+        taskElement.style.left = newLeft + 'px';
+        taskElement.style.transform = 'translateY(-50%) scale(1.02)';
       }
     };
-    
-    const handleGlobalMouseUp = async (e) => {
-      if (!dragState) return;
+
+    const handleMouseUp = (e) => {
+      if (!dragData) return;
       
-      console.log('全局鼠標釋放，執行拖拽完成邏輯');
-      
-      const rect = ganttRef.current?.getBoundingClientRect();
-      if (!rect) {
-        setDragState(null);
-        return;
-      }
-      
+      const rect = ganttContainer.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
-      const deltaX = currentX - dragState.startX;
+      const deltaX = currentX - dragData.startX;
       const deltaDays = Math.round(deltaX / 60);
       
-      const task = scheduledTasks.find(t => t.id === dragState.taskId);
-      if (!task) {
-        setDragState(null);
-        return;
+      const taskElement = ganttContainer.querySelector(`[data-task-id="${dragData.taskId}"]`);
+      if (taskElement) {
+        taskElement.style.zIndex = '';
+        taskElement.style.opacity = '';
+        taskElement.style.transform = 'translateY(-50%)';
       }
-      
-      let updateNeeded = false;
-      let newStartDate = task.startDate;
-      let newDuration = task.duration;
-      
-      if (dragState.type === 'move' && deltaDays !== 0) {
-        const newStartDay = Math.max(0, dragState.startDay + deltaDays);
-        newStartDate = new Date(currentProject.startDate);
+
+      if (deltaDays !== 0) {
+        // 計算新的開始日期
+        const newStartDay = Math.max(0, dragData.startDay + deltaDays);
+        const newStartDate = new Date(currentProject.startDate);
         newStartDate.setDate(newStartDate.getDate() + newStartDay);
-        updateNeeded = true;
         
-        console.log('拖拽更新:', {
-          原始任務: task.name,
-          原始startDay: dragState.startDay,
-          移動天數: deltaDays,
-          新startDay: newStartDay,
-          新開始日期: newStartDate.toISOString().split('T')[0]
+        // 計算新的結束日期
+        const newEndDate = new Date(newStartDate);
+        newEndDate.setDate(newEndDate.getDate() + dragData.task.duration - 1);
+
+        console.log('更新任務位置:', {
+          taskName: dragData.task.name,
+          deltaDays,
+          newStartDate: newStartDate.toISOString().split('T')[0],
+          newEndDate: newEndDate.toISOString().split('T')[0]
         });
-      } else if (dragState.type === 'resize') {
-        if (dragState.direction === 'right') {
-          newDuration = Math.max(1, dragState.originalDuration + deltaDays);
-          updateNeeded = newDuration !== task.duration;
-        } else if (dragState.direction === 'left') {
-          newDuration = Math.max(1, dragState.originalDuration - deltaDays);
-          const daysDiff = task.duration - newDuration;
-          newStartDate = new Date(task.startDate);
-          newStartDate.setDate(newStartDate.getDate() + daysDiff);
-          updateNeeded = newDuration !== task.duration;
-        }
-      }
-      
-      if (updateNeeded) {
+
         try {
-          // 檢查是否會影響後續任務
-          const affectedTasks = scheduledTasks.filter(t => 
-            t.order > task.order && 
-            (newStartDate > task.startDate || newDuration !== task.duration)
-          );
-          
-          if (affectedTasks.length > 0) {
-            const shouldUpdateFollowing = window.confirm(
-              `此變更會影響到 ${affectedTasks.length} 個後續任務的排程，是否一併調整？`
-            );
-            
-            if (shouldUpdateFollowing) {
-            // 更新當前任務
-            const newEndDate = new Date(newStartDate);
-            newEndDate.setDate(newEndDate.getDate() + newDuration - 1);
-            
-            actions.updateTask(currentProject.id, task.id, {
-              duration: newDuration,
-              startDate: newStartDate,
-              endDate: newEndDate
-            });
-            
-            // 重新計算所有任務排程
-            setTimeout(() => {
-              const updatedProject = getCurrentProject();
-              const rescheduledTasks = calculateProjectSchedule(
-                updatedProject.tasks,
-                updatedProject.startDate,
-                updatedProject.skipSaturday,
-                updatedProject.skipSunday
-              );
-              
-              rescheduledTasks.forEach(scheduledTask => {
-                actions.updateTask(updatedProject.id, scheduledTask.id, {
-                  startDate: scheduledTask.startDate,
-                  endDate: scheduledTask.endDate
-                });
-              });
-            }, 100);
-          } else {
-            // 只更新當前任務
-            const newEndDate = new Date(newStartDate);
-            newEndDate.setDate(newEndDate.getDate() + newDuration - 1);
-            
-            actions.updateTask(currentProject.id, task.id, {
-              duration: newDuration,
-              startDate: newStartDate,
-              endDate: newEndDate
-            });
-          }
-        } else {
-          // 沒有影響其他任務，直接更新
-          const newEndDate = new Date(newStartDate);
-          newEndDate.setDate(newEndDate.getDate() + newDuration - 1);
-          
-          actions.updateTask(currentProject.id, task.id, {
-            duration: newDuration,
+          actions.updateTask(currentProject.id, dragData.taskId, {
             startDate: newStartDate,
             endDate: newEndDate
           });
-        }
         } catch (error) {
-          console.error('拖拽更新任務時發生錯誤:', error);
-          alert('更新任務時發生錯誤，請重試');
+          console.error('更新任務失敗:', error);
+          // 恢復原位置
+          if (taskElement) {
+            taskElement.style.left = dragData.originalLeft + 'px';
+          }
         }
       }
-      
-      setDragState(null);
+
+      dragData = null;
+      setIsDragging(false);
     };
+
+    // 添加事件監聽器
+    ganttContainer.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
     
-    if (dragState) {
-      console.log('添加全局事件監聽器');
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-      
-      return () => {
-        console.log('移除全局事件監聽器');
-        document.removeEventListener('mousemove', handleGlobalMouseMove);
-        document.removeEventListener('mouseup', handleGlobalMouseUp);
-      };
-    }
-  }, [dragState, scheduledTasks, currentProject, actions, getCurrentProject]);
+    return () => {
+      ganttContainer.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [scheduledTasks, currentProject, actions]);
 
   const { scheduledTasks, dateRange } = useMemo(() => {
     if (!currentProject || !currentProject.startDate || currentProject.tasks.length === 0) {
@@ -242,71 +186,7 @@ function GanttChart() {
 
   const categories = [...new Set(scheduledTasks.map(t => t.category))];
 
-  // 拖拽處理函數
-  const handleTaskMouseDown = (e, task, category) => {
-    // 檢查是否點擊在調整大小手柄上
-    if (e.target.classList.contains('resize-handle')) return;
-    
-    // 確保只有左鍵點擊才觸發拖拽
-    if (e.button !== 0) return;
-    
-    const rect = ganttRef.current.getBoundingClientRect();
-    const startX = e.clientX - rect.left;
-    // 確保日期計算正確
-    const taskStartDate = new Date(task.startDate);
-    const projectStartDate = new Date(currentProject.startDate);
-    
-    // 重置時間到午夜，避免時區問題
-    taskStartDate.setHours(0, 0, 0, 0);
-    projectStartDate.setHours(0, 0, 0, 0);
-    
-    const startDay = Math.floor((taskStartDate.getTime() - projectStartDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    console.log('任務拖拽開始:', {
-      任務名稱: task.name,
-      任務開始日期: taskStartDate.toISOString().split('T')[0],
-      專案開始日期: projectStartDate.toISOString().split('T')[0],
-      計算startDay: startDay,
-      鼠標位置: { startX }
-    });
-    
-    setDragState({
-      taskId: task.id,
-      category,
-      type: 'move',
-      startX,
-      startDay,
-      previewStartDay: startDay
-    });
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('開始拖拽任務:', task.name, 'startDay:', startDay);
-  };
-
-  const handleResizeStart = (e, task, direction) => {
-    e.stopPropagation();
-    
-    // 確保只有左鍵點擊才觸發調整大小
-    if (e.button !== 0) return;
-    
-    const rect = ganttRef.current.getBoundingClientRect();
-    const startX = e.clientX - rect.left;
-    
-    setDragState({
-      taskId: task.id,
-      type: 'resize',
-      direction,
-      startX,
-      originalDuration: task.duration,
-      previewDuration: task.duration
-    });
-    
-    e.preventDefault();
-    
-    console.log('開始調整大小:', task.name, direction, '原始工期:', task.duration);
-  };
+  // 原本的拖拽函數已被純JavaScript實現替代
 
 
 
@@ -314,7 +194,6 @@ function GanttChart() {
     <div 
       className="gantt-container"
       ref={ganttRef}
-      onMouseLeave={() => setDragState(null)}
     >
       <div className="view-header">
         <h2>🏊‍♂️ 甘特圖 - {currentProject.name}</h2>
@@ -391,21 +270,7 @@ function GanttChart() {
                   let displayLeft = startDay * 60;
                   let displayWidth = Math.min(duration * 60, (dateRange.length - startDay) * 60);
                   
-                  // 如果正在拖拽此任務，使用預覽位置
-                  if (dragState?.taskId === task.id) {
-                    if (dragState.type === 'move' && dragState.previewStartDay !== undefined) {
-                      displayLeft = dragState.previewStartDay * 60;
-                      displayWidth = Math.min(duration * 60, (dateRange.length - dragState.previewStartDay) * 60);
-                    } else if (dragState.type === 'resize' && dragState.previewDuration !== undefined) {
-                      if (dragState.direction === 'right') {
-                        displayWidth = Math.min(dragState.previewDuration * 60, (dateRange.length - startDay) * 60);
-                      } else if (dragState.direction === 'left') {
-                        const daysDiff = duration - dragState.previewDuration;
-                        displayLeft = (startDay + daysDiff) * 60;
-                        displayWidth = Math.min(dragState.previewDuration * 60, (dateRange.length - startDay - daysDiff) * 60);
-                      }
-                    }
-                  }
+                  // 純JavaScript拖拽不需要預覽狀態
                   
                   const width = displayWidth;
                   const left = displayLeft;
@@ -426,15 +291,9 @@ function GanttChart() {
                   const taskSegments = [];
                   const taskBackground = getTaskBackground(task.category);
                   
-                  // 根據拖拽狀態調整分段計算的起始和結束日
+                  // 簡化分段計算
                   let segmentStartDay = startDay;
                   let segmentEndDay = endDay;
-                  
-                  if (dragState?.taskId === task.id && dragState.type === 'move' && dragState.previewStartDay !== undefined) {
-                    const deltaDays = dragState.previewStartDay - startDay;
-                    segmentStartDay = dragState.previewStartDay;
-                    segmentEndDay = endDay + deltaDays;
-                  }
                   
                   for (let d = segmentStartDay; d <= segmentEndDay; d++) {
                     if (d >= 0 && d < dateRange.length) {
@@ -468,29 +327,25 @@ function GanttChart() {
                   return (
                     <div
                       key={task.id}
-                      className={`gantt-task ${task.category} ${dragState?.taskId === task.id ? 'dragging' : ''}`}
+                      data-task-id={task.id}
+                      className={`gantt-task ${task.category} ${isDragging ? 'dragging' : ''}`}
                       style={{ 
                         left: `${left}px`, 
                         width: `${width}px`,
                         background: 'transparent',
-                        cursor: dragState?.taskId === task.id ? 'grabbing' : 'grab',
-                        zIndex: dragState?.taskId === task.id ? 1000 : 1,
-                        opacity: dragState?.taskId === task.id ? 0.8 : 1,
-                        transition: dragState?.taskId === task.id ? 'none' : 'all 0.2s ease'
+                        cursor: 'grab',
+                        position: 'absolute',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        height: '24px',
+                        userSelect: 'none'
                       }}
                       title={`${task.name}\n${formatDate(task.startDate)} ~ ${formatDate(task.endDate)}\n${task.duration}天 | 成本: NT$ ${task.cost.toLocaleString()} | 售價: NT$ ${task.price.toLocaleString()}`}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleTaskMouseDown(e, task, category);
-                      }}
                     >
                       {/* 分段背景 */}
                       {taskSegments}
                       
-                      {/* 控制手柄 */}
-                      <div className="resize-handle left" onMouseDown={(e) => handleResizeStart(e, task, 'left')} />
-                      <div className="resize-handle right" onMouseDown={(e) => handleResizeStart(e, task, 'right')} />
+                      {/* 控制手柄暫時移除 */}
                       
                       {/* 任務文字 */}
                       <div style={{
